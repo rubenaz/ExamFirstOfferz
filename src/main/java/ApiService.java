@@ -49,9 +49,8 @@ public class ApiService {
 
 //================================================================================================
 
-  public static JSONObject getWeatherPerDays(String city, String country, String days) {
-    String id = getTheID(city, country);
-    if (id.equals("not found"))
+  public static JSONObject getWeatherPerDays(String city, String country, String days, String id) {
+    if (id.equals(""))
       return errorMessage("GIVE A CORRECT CITY/COUNTRY");
     if (days.length() > 1 || days.equals("") || Integer.parseInt(days) == 0 || Integer.parseInt(days) > 5)
       return errorMessage("DAYS INCORRECT");
@@ -99,7 +98,8 @@ public class ApiService {
   //================================================================================================
   private static String getTheID(String city, String country) {
     System.out.println("AHAHAHAHAHAHAAHAHAH");
-    Gson gson = new Gson();
+
+   /* Gson gson = new Gson();
     JsonElement json = null;
     try {
       json = gson.fromJson(new FileReader("city.json"), JsonElement.class);
@@ -113,7 +113,7 @@ public class ApiService {
       }
     } catch (FileNotFoundException e) {
       e.printStackTrace();
-    }
+    }*/
     return "not found";
   }
 }

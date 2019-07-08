@@ -1,8 +1,22 @@
 import io.vertx.core.*;
+import io.vertx.core.file.AsyncFile;
+import io.vertx.core.file.OpenOptions;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.Router;
+import io.vertx.reactivex.core.parsetools.RecordParser;
+import io.vertx.rxjava.core.buffer.Buffer;
+import io.vertx.rxjava.core.parsetools.JsonParser;
+import io.vertx.rxjava.core.streams.Pump;
+import io.vertx.rxjava.core.streams.ReadStream;
+import org.json.JSONObject;
+import org.junit.experimental.theories.DataPoint;
 import org.junit.internal.TextListener;
 import org.junit.runner.JUnitCore;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.vertx.core.parsetools.JsonEventType.VALUE;
 
 public class MainVerticle extends AbstractVerticle {
 
@@ -37,9 +51,3 @@ public class MainVerticle extends AbstractVerticle {
       .handler(RouterService::forecastsHandler);
   }
 }
- /* @Override
-  public void start(){
-    RouterService routerService = new RouterService(vertx);
-    //routerService.getResponse();
-}
-}*/
