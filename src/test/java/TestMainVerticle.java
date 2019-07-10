@@ -1,3 +1,4 @@
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
@@ -5,6 +6,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.json.HTTP;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,30 +16,20 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
-/**
- * This is our JUnit test for our verticle. The test uses vertx-unit, so we declare a custom runner.
- */
+
 @RunWith(VertxUnitRunner.class)
 public class TestMainVerticle {
 
   private Vertx vertx;
   private Integer port;
 
-  /**
-   * Before executing our test, let's deploy our verticle.
-   * <p/>
-   * This method instantiates a new Vertx and deploy the verticle. Then, it waits in the verticle has successfully
-   * completed its start sequence (thanks to `context.asyncAssertSuccess`).
-   *
-   * @param context the test context.
-   */
   @Before
   public void setUp(TestContext context) throws IOException {
     vertx = Vertx.vertx();
 
-    // Let's configure the verticle to listen on the 'test' port (randomly picked).
-    // We create deployment options and set the _configuration_ json object:
     ServerSocket socket = new ServerSocket(0);
     port = 8080;
     socket.close();
@@ -48,27 +42,31 @@ public class TestMainVerticle {
     vertx.deployVerticle(MainVerticle.class.getName(), options, context.asyncAssertSuccess());
   }
 
-  /**
-   * This method, called after our test, just cleanup everything by closing the vert.x instance
-   *
-   * @param context the test context
-   */
+
   @After
   public void tearDown(TestContext context) {
     vertx.close(context.asyncAssertSuccess());
   }
 
-  /**
-   * Let's ensure that our application behaves correctly.
-   *
-   * @param context the test context
-   */
+
   @Test
   public void testHealtCheck(TestContext context) {
     final Async async = context.async();
     vertx.createHttpClient().getNow(port, "localhost", "/healthcheck", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.OK.code());
+      context.assertEquals(response.headers().get("content-type"), "text/plain");
       response.handler(body -> {
         context.assertTrue(body.toString().contains("I'm alive!!!"));
+        async.complete();
+      });
+    });
+  }
+  @Test
+  public void testHealtCheckWrongURL(TestContext context) {
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/healthchecksacdf", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.NOT_FOUND.code());
+      response.handler(body -> {
         async.complete();
       });
     });
@@ -77,11 +75,157 @@ public class TestMainVerticle {
   public void testHello(TestContext context) {
     final Async async = context.async();
     vertx.createHttpClient().getNow(port, "localhost", "/hello?name=Tal", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.OK.code());
+      context.assertEquals(response.headers().get("content-type"), "text/plain");
       response.handler(body -> {
         context.assertTrue(body.toString().contains("Hello Tal!"));
         async.complete();
       });
     });
   }
-  
+  @Test
+  public void testHelloWrongURL(TestContext context) {
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "hello?name=Tal", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.NOT_FOUND.code());
+      response.handler(body -> {
+        async.complete();
+      });
+    });
+  }
+  @Test
+  public void testCurrentWeather(TestContext context) {
+    String date = getDate(0);
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/currentforecasts?city=paris&country=fr", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.OK.code());
+      context.assertEquals(response.headers().get("content-type"), "application/json");
+      response.handler(body -> {
+        final JSONObject currentWeather = new JSONObject(body.toString());
+        context.assertEquals(currentWeather.get("country"), "fr");
+        context.assertEquals(currentWeather.get("city"), "paris");
+        context.assertEquals(currentWeather.get("date"), date);
+        async.complete();
+      });
+    });
+  }
+
+  @Test
+  public void testCurrentWeatherWrongCity(TestContext context) {
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/currentforecasts?city=juju&country=fr", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
+      context.assertEquals(response.headers().get("content-type"), "application/json");
+      response.handler(body -> {
+        final JSONObject currentWeather = new JSONObject(body.toString());
+        context.assertEquals(currentWeather.get("error"), "this place is not exist");
+        async.complete();
+      });
+    });
+  }
+
+  @Test
+  public void testCurrentWeatherWrongCountry(TestContext context) {
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/currentforecasts?city=paris&country=es", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
+      context.assertEquals(response.headers().get("content-type"), "application/json");
+      response.handler(body -> {
+        final JSONObject currentWeather = new JSONObject(body.toString());
+        context.assertEquals(currentWeather.get("error"), "this place is not exist");
+        async.complete();
+      });
+    });
+  }
+  @Test
+  public void testCurrentWeatherCountryTooLong(TestContext context) {
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/currentforecasts?city=paris&country=france", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
+      context.assertEquals(response.headers().get("content-type"), "application/json");
+      response.handler(body -> {
+        final JSONObject currentWeather = new JSONObject(body.toString());
+        context.assertEquals(currentWeather.get("error"), "GIVE A COUNTRY PARAM WITH 2 LETTERS");
+        async.complete();
+      });
+    });
+  }
+  @Test
+  public void testCurrentWeatherWrongURL(TestContext context) {
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/currentforecastscity=paris&country=france", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.NOT_FOUND.code());
+      response.handler(body -> {
+        async.complete();
+      });
+    });
+  }
+
+  @Test
+  public void testForecastWeather(TestContext context) {
+
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/forecasts?city=Begichevo&country=RU&days=3", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.OK.code());
+      context.assertEquals(response.headers().get("content-type"), "application/json");
+      response.handler(body -> {
+        final JSONObject currentWeather = new JSONObject(body.toString());
+        JSONArray forecast =currentWeather.getJSONArray("forecasts");
+        context.assertEquals(forecast.length(),3);
+        for (int i = 0; i < 3 ; i++) {
+          System.out.println(forecast.getJSONObject(i).get("date"));
+          context.assertEquals(forecast.getJSONObject(i).get("date"), getDate(i));
+
+        }
+        async.complete();
+      });
+    });
+  }
+
+  @Test
+  public void testForecastWeatherDaysIsNotNumber(TestContext context) {
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/forecasts?city=Begichevo&country=RU&days=paris", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
+      response.handler(body -> {
+        async.complete();
+      });
+    });
+  }
+  @Test
+  public void testForecastWeatherPassDayLimit(TestContext context) {
+
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/forecasts?city=Begichevo&country=RU&days=89", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
+      context.assertEquals(response.headers().get("content-type"), "application/json");
+      response.handler(body -> {
+        final JSONObject currentWeather = new JSONObject(body.toString());
+        context.assertEquals(currentWeather.get("error"), "DAYS INCORRECT");
+        async.complete();
+      });
+    });
+  }
+  @Test
+  public void testForecastWeatherNegativeDay(TestContext context) {
+
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/forecasts?city=Begichevo&country=RU&days=-2", response -> {
+      context.assertEquals(response.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
+      context.assertEquals(response.headers().get("content-type"), "application/json");
+      response.handler(body -> {
+        final JSONObject currentWeather = new JSONObject(body.toString());
+        context.assertEquals(currentWeather.get("error"), "DAYS INCORRECT");
+        async.complete();
+      });
+    });
+  }
+
+  private String getDate(int days)
+  {
+    LocalDate localDate = LocalDate.now();
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+    return localDate.plusDays(days).format(formatter);
+  }
+
 }

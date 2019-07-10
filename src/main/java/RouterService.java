@@ -11,6 +11,7 @@ import org.json.JSONObject;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -53,25 +54,6 @@ public class RouterService extends AbstractVerticle {
           .end(future.result());
       }
   });
-
-   /* String id = getTheId(city.substring(0, 1).toUpperCase() + city.substring(1),country.toUpperCase(),routingContext.vertx());
-    System.out.println(id);
-
-
-    JSONObject response = ApiService.getWeatherPerDays(city, country,days,id);
-    if( response.has("error"))
-      routingContext.response()
-        .putHeader("content-type", "application/json")
-        .setStatusCode(400)
-        .end(response.toString());
-    else {
-      JSONObject forecasts = getFinalResponsePerDay(response, days);
-      System.out.println("forecasts: " + forecasts);
-      routingContext.response()
-        .putHeader("content-type", "application/json")
-        .setStatusCode(200)
-        .end(forecasts.toString());
-    }*/
   }
 
   public static void currentForecastsHandler(RoutingContext routingContext) {
@@ -86,15 +68,12 @@ public class RouterService extends AbstractVerticle {
     System.out.println("response: " + response);
     if (response.has("error")) {
 
-      System.out.println("why im here???: ");
 
       routingContext.response()
         .putHeader("content-type", "application/json")
         .setStatusCode(400)
         .end(response.toString());
     } else {
-      System.out.println("currentForecasts: ");
-
       JSONObject currentForecasts = getFinalResponse(response, city, country);
 
       routingContext.response()
@@ -138,7 +117,7 @@ public class RouterService extends AbstractVerticle {
   public static String getDate(long seconds) {
     System.out.println(seconds);
     Date date = new Date(seconds);
-    DateFormat format = new SimpleDateFormat("dd/MM/yyyy");
+    DateFormat format = new SimpleDateFormat("yyyy/MM/dd");
     return format.format(date);
   }
 
@@ -176,37 +155,11 @@ public class RouterService extends AbstractVerticle {
 
   private static JSONObject createDayObject(String apiDate, double temp, double temp_max, double temp_min, int countByThreeHours) {
     JSONObject day = new JSONObject();
-    day.put("date", apiDate);
+    day.put("date", apiDate.replace("-","/"));
     day.put("temp", String.format("%.2f", temp / countByThreeHours));
     day.put("temp_max", String.format("%.2f", temp_max / countByThreeHours));
     day.put("temp_min", String.format("%.2f", temp_min / countByThreeHours));
     return day;
-  }
-
-  private static String getTheId(String city, String country, Vertx vertx) {
-    System.out.println("GET THE ID");
-    System.out.println("City : " + city + "  Country : " + country);
-    AtomicReference<String> cityId = new AtomicReference<>("");
-    vertx.fileSystem().open("city.json", new OpenOptions().setWrite(false).setCreate(false), result -> {
-      if (result.succeeded()) {
-        System.out.println("SUCCEED");
-        System.out.println("Copy done");
-        // });
-
-       /* JsonArray listname = result.result().toJsonArray();
-        for (int i = 0; i <listname.size() ; i++) {
-          if (listname.getJsonObject(i).getValue("name").toString().equals(city) && listname.getJsonObject(i).getValue("country").toString().equals(country)) {
-            System.out.println( "NAME CTY : " + listname.getJsonObject(i).getValue("name").toString());
-            cityId.set(listname.getJsonObject(i).getValue("id").toString());
-            System.out.println("ID : " + cityId.toString());
-          }
-        }*/
-      } else {
-        System.err.println("Oh oh ..." + result.cause());
-      }
-    });
-    System.out.println("FINAL ID : " + cityId.toString());
-    return cityId.get();
   }
 
   private static Future<String> readFile(Vertx vertx, String city, String country) {
