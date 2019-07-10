@@ -49,7 +49,7 @@ public class ApiService {
 
 //================================================================================================
 
-  public static JSONObject getWeatherPerDays(String city, String country, String days, String id) {
+  public static JSONObject getWeatherPerDays(String days, String id) {
     if (id.equals(""))
       return errorMessage("GIVE A CORRECT CITY/COUNTRY");
     if (days.length() > 1 || days.equals("") || Integer.parseInt(days) == 0 || Integer.parseInt(days) > 5)

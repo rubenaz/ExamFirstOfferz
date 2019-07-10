@@ -21,9 +21,11 @@ public class RouterService extends AbstractVerticle {
 
     String city = routingContext.request()
       .getParam("city");
+    city=city.substring(0,1).toUpperCase() + city.substring(1).toLowerCase();
 
     String country = routingContext.request()
       .getParam("country");
+    country=country.toUpperCase();
 
     String days = routingContext.request()
       .getParam("days");
@@ -31,7 +33,7 @@ public class RouterService extends AbstractVerticle {
     future.setHandler(asyncResult -> {
       if(asyncResult.succeeded())
       {
-        JSONObject response = ApiService.getWeatherPerDays(city, country,days,future.result());
+        JSONObject response = ApiService.getWeatherPerDays(days,future.result());
         if( response.has("error"))
           routingContext.response()
             .putHeader("content-type", "application/json")
