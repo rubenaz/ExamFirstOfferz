@@ -64,14 +64,8 @@ public class TestMainVerticle {
    * @param context the test context
    */
   @Test
-  public void testMyApplication(TestContext context) {
-    // This test is asynchronous, so get an async handler to inform the test when we are done.
+  public void testHealtCheck(TestContext context) {
     final Async async = context.async();
-
-    // We create a HTTP client and query our application. When we get the response we check it contains the 'Hello'
-    // message. Then, we call the `complete` method on the async handler to declare this async (and here the test) done.
-    // Notice that the assertions are made on the 'context' object and are not Junit assert. This ways it manage the
-    // async aspect of the test the right way.
     vertx.createHttpClient().getNow(port, "localhost", "/healthcheck", response -> {
       response.handler(body -> {
         context.assertTrue(body.toString().contains("I'm alive!!!"));
@@ -79,8 +73,18 @@ public class TestMainVerticle {
       });
     });
   }
+  @Test
+  public void testHello(TestContext context) {
+    final Async async = context.async();
+    vertx.createHttpClient().getNow(port, "localhost", "/hello?name=Tal", response -> {
+      response.handler(body -> {
+        context.assertTrue(body.toString().contains("Hello Tal!"));
+        async.complete();
+      });
+    });
+  }
 
- /* @Test
+  /*@Test
   public void checkThatTheIndexPageIsServed(TestContext context) {
     Async async = context.async();
     vertx.createHttpClient().getNow(port, "localhost", "/assets/index.html", response -> {
@@ -91,7 +95,7 @@ public class TestMainVerticle {
         async.complete();
       });
     });
-  }
+  }*/
 
   @Test
   public void checkThatWeCanAdd(TestContext context) {
@@ -113,5 +117,5 @@ public class TestMainVerticle {
       })
       .write(json)
       .end();
-  }*/
+  }
 }
