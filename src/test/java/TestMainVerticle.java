@@ -22,7 +22,7 @@ import java.time.format.DateTimeFormatter;
 
 @RunWith(VertxUnitRunner.class)
 public class TestMainVerticle {
-
+  private final  String  HEALTHCHECK_MESSAGE="I'm alive!!!";
   private Vertx vertx;
   private Integer port;
 
@@ -56,7 +56,7 @@ public class TestMainVerticle {
       context.assertEquals(response.statusCode(), HttpResponseStatus.OK.code());
       context.assertEquals(response.headers().get("content-type"), "text/plain");
       response.handler(body -> {
-        context.assertTrue(body.toString().contains("I'm alive!!!"));
+        context.assertTrue(body.toString().contains(HEALTHCHECK_MESSAGE));
         async.complete();
       });
     });
@@ -123,7 +123,7 @@ public class TestMainVerticle {
       context.assertEquals(response.headers().get("content-type"), "application/json");
       response.handler(body -> {
         final JSONObject currentWeather = new JSONObject(body.toString());
-        context.assertEquals(currentWeather.get("error"), "this place is not exist");
+        context.assertEquals(currentWeather.get("error"), ApiService.INCORRECT_PLACE_MESSAGE);
         async.complete();
       });
     });
@@ -139,7 +139,7 @@ public class TestMainVerticle {
       context.assertEquals(response.headers().get("content-type"), "application/json");
       response.handler(body -> {
         final JSONObject currentWeather = new JSONObject(body.toString());
-        context.assertEquals(currentWeather.get("error"), "this place is not exist");
+        context.assertEquals(currentWeather.get("error"), ApiService.INCORRECT_PLACE_MESSAGE);
         async.complete();
       });
     });
@@ -154,7 +154,7 @@ public class TestMainVerticle {
       context.assertEquals(response.headers().get("content-type"), "application/json");
       response.handler(body -> {
         final JSONObject currentWeather = new JSONObject(body.toString());
-        context.assertEquals(currentWeather.get("error"), "GIVE A COUNTRY PARAM WITH 2 LETTERS");
+        context.assertEquals(currentWeather.get("error"), ApiService.INCORRECT_PLACE_SIZE_MESSAGE);
         async.complete();
       });
     });
@@ -185,7 +185,6 @@ public class TestMainVerticle {
         JSONArray forecast =currentWeather.getJSONArray("forecasts");
         context.assertEquals(forecast.length(),3);
         for (int i = 0; i < 3 ; i++) {
-          System.out.println(forecast.getJSONObject(i).get("date"));
           context.assertEquals(forecast.getJSONObject(i).get("date"), getDate(i));
 
         }
@@ -219,7 +218,7 @@ public class TestMainVerticle {
       context.assertEquals(response.headers().get("content-type"), "application/json");
       response.handler(body -> {
         final JSONObject currentWeather = new JSONObject(body.toString());
-        context.assertEquals(currentWeather.get("error"), "DAYS INCORRECT");
+        context.assertEquals(currentWeather.get("error"), ApiService.INCORRECT_DAY_MESSAGE);
         async.complete();
       });
     });
@@ -236,7 +235,7 @@ public class TestMainVerticle {
       context.assertEquals(response.headers().get("content-type"), "application/json");
       response.handler(body -> {
         final JSONObject currentWeather = new JSONObject(body.toString());
-        context.assertEquals(currentWeather.get("error"), "DAYS INCORRECT");
+        context.assertEquals(currentWeather.get("error"), ApiService.INCORRECT_DAY_MESSAGE);
         async.complete();
       });
     });

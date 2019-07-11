@@ -18,30 +18,30 @@ import java.util.concurrent.atomic.AtomicReference;
 public class RouterService extends AbstractVerticle {
 
   public static void forecastsHandler(RoutingContext routingContext) {
+    //  if the url is type of "http://localhost:8080/forecasts?city=XXX&country=XX&days=X"
 
-    String city = routingContext.request()
+    String city = routingContext.request()//get the city parameter
       .getParam("city");
     city=city.substring(0,1).toUpperCase() + city.substring(1).toLowerCase();
 
-    String country = routingContext.request()
+    String country = routingContext.request()//get the country parameter
       .getParam("country");
     country=country.toUpperCase();
 
-    String days = routingContext.request()
+    String days = routingContext.request()//get the days parameter
       .getParam("days");
-    Future<String> future = readFile(routingContext.vertx(),city,country);
+    Future<String> future = readFile(routingContext.vertx(),city,country);//get the id of the city.json file
     future.setHandler(asyncResult -> {
       if(asyncResult.succeeded())
       {
-        JSONObject response = ApiService.getWeatherPerDays(days,future.result());
-        if( response.has("error"))
+        JSONObject response = ApiService.getWeatherPerDays(days,future.result());//get the response from api
+        if( response.has("error"))// if find error (city not correct bug with internet etc...)
           routingContext.response()
             .putHeader("content-type", "application/json")
             .setStatusCode(400)
             .end(response.toString());
         else {
-          JSONObject forecasts = getFinalResponsePerDay(response, days);
-          System.out.println("forecasts: " + forecasts);
+          JSONObject forecasts = getFinalResponsePerDay(response, days);//get the final response in json object
           routingContext.response()
             .putHeader("content-type", "application/json")
             .setStatusCode(200)
@@ -57,26 +57,26 @@ public class RouterService extends AbstractVerticle {
       }
   });
   }
+//================================================================================================
 
   public static void currentForecastsHandler(RoutingContext routingContext) {
-    String city = routingContext.request()
+    //  if the url is type of "http://localhost:8080/currentforecasts?city=XXX&country=XX"
+
+    String city = routingContext.request()//get the city parameter
       .getParam("city");
 
-    String country = routingContext.request()
+    String country = routingContext.request()//get the country parameter
       .getParam("country");
 
-    JSONObject response = ApiService.getCurrentWheater(city, country);
+    JSONObject response = ApiService.getCurrentWheater(city, country);//get response from api
 
-    System.out.println("response: " + response);
-    if (response.has("error")) {
-
-
+    if (response.has("error")) {// if find error (city not correct bug with internet etc...)
       routingContext.response()
         .putHeader("content-type", "application/json")
         .setStatusCode(400)
         .end(response.toString());
     } else {
-      JSONObject currentForecasts = getFinalResponse(response, city, country);
+      JSONObject currentForecasts = getFinalResponse(response, city, country);//get the final result in json object
 
       routingContext.response()
         .putHeader("content-type", "application/json")
@@ -84,9 +84,11 @@ public class RouterService extends AbstractVerticle {
         .end(currentForecasts.toString());
     }
   }
+//================================================================================================
 
   public static void helloHandler(RoutingContext routingContext) {
-    String name = routingContext.request()
+    //   if the url is type of "http://localhost:8080/hello?name=XX"
+    String name = routingContext.request()//get the name parameter
       .getParam("name");
 
     routingContext.response()
@@ -94,16 +96,20 @@ public class RouterService extends AbstractVerticle {
       .setStatusCode(200)
       .end("Hello " + name + "!");
   }
+//================================================================================================
 
   public static void healthCheckHandler(RoutingContext routingContext) {
+    //   if the url is type of "http://localhost:8080/healthcheck"
+
     routingContext.response()
       .putHeader("content-type", "text/plain")
       .setStatusCode(200)
       .end("I'm alive!!!");
   }
-
+//================================================================================================
 
   private static JSONObject getFinalResponse(JSONObject result, String cityName, String countryName) {
+    //create JsonObject for current Weather
     String date = result.get("dt").toString();
     date = getDate(Long.parseLong(date) * 1000);
     JSONObject json = new JSONObject();
@@ -115,39 +121,41 @@ public class RouterService extends AbstractVerticle {
     return json;
 
   }
+//================================================================================================
 
-  public static String getDate(long seconds) {
-    System.out.println(seconds);
+  private static String getDate(long seconds) {
+    //transalte the date that appeared in second in the api to date
     Date date = new Date(seconds);
     DateFormat format = new SimpleDateFormat("yyyy/MM/dd");
     return format.format(date);
   }
+//================================================================================================
 
   private static JSONObject getFinalResponsePerDay(JSONObject result, String days) {
-    System.out.println("IN THE GET FINAL RESPONSE");
-    int count = 0;
-    double temp = 0, temp_max = 0, temp_min = 0;
-    int countByThreeHours = 0;
+    //create JsonObject for  Weather per days
+    int countOfDays = 0;//how many day passed
+    double temp = 0, temp_max = 0, temp_min = 0; // the current temperature , max and min
+    int countByThreeHours = 0;//to know how to calculate the average of the temp ( count of 3 hours per day )
     int i = 0;
-    int numOfDays = Integer.parseInt(days);
-    String apiDate = result.getJSONArray("list").getJSONObject(0).get("dt_txt").toString().split(" ")[0];
+    int numOfDaysInTheUrl = Integer.parseInt(days);
+    String apiDate = result.getJSONArray("list").getJSONObject(0).get("dt_txt").toString().split(" ")[0];//the date fron the api
     JSONObject json = new JSONObject();
     JSONArray weatherArray = new JSONArray();
-    while (count < numOfDays) {
+    while (countOfDays < numOfDaysInTheUrl) {//
       JSONObject data = result.getJSONArray("list").getJSONObject(i);
       String currentDate = data.get("dt_txt").toString().split(" ")[0];
-      if (!apiDate.equals(currentDate)) {
-        weatherArray.put(createDayObject(apiDate, temp, temp_max, temp_min, countByThreeHours));
-        count++;
+      if (!apiDate.equals(currentDate)) {//if the date changed (if it is the next day )
+        weatherArray.put(createDayObject(apiDate, temp, temp_max, temp_min, countByThreeHours));//create JsonObject of this day
+        countOfDays++;//next day
         countByThreeHours = 0;
         apiDate = currentDate;
         temp = 0;
         temp_max = 0;
         temp_min = 0;
       }
-      temp += Double.parseDouble(data.getJSONObject("main").get("temp").toString());
-      temp_min += Double.parseDouble(data.getJSONObject("main").get("temp_min").toString());
-      temp_max += Double.parseDouble(data.getJSONObject("main").get("temp_max").toString());
+      temp += Double.parseDouble(data.getJSONObject("main").get("temp").toString());//add the temp for this 3 hours
+      temp_min += Double.parseDouble(data.getJSONObject("main").get("temp_min").toString());//add the temp for this 3 hours
+      temp_max += Double.parseDouble(data.getJSONObject("main").get("temp_max").toString());//add the temp for this 3 hours
       countByThreeHours++;
       i++;
     }
@@ -158,66 +166,29 @@ public class RouterService extends AbstractVerticle {
   private static JSONObject createDayObject(String apiDate, double temp, double temp_max, double temp_min, int countByThreeHours) {
     JSONObject day = new JSONObject();
     day.put("date", apiDate.replace("-","/"));
-    day.put("temp", String.format("%.2f", temp / countByThreeHours));
-    day.put("temp_max", String.format("%.2f", temp_max / countByThreeHours));
-    day.put("temp_min", String.format("%.2f", temp_min / countByThreeHours));
+    day.put("temp", String.format("%.2f", temp / countByThreeHours));//average  temp
+    day.put("temp_max", String.format("%.2f", temp_max / countByThreeHours));//average temp max
+    day.put("temp_min", String.format("%.2f", temp_min / countByThreeHours));//average temp min
     return day;
   }
 
   private static Future<String> readFile(Vertx vertx, String city, String country) {
+    //read fron city.json file
     Future<String> future = Future.future();
     vertx.fileSystem().readFile("city.json", result -> {
       if (result.succeeded()) {
-        String id="";
+        String id=ApiService.ID_NOT_FOUND;
         JsonArray listname = result.result().toJsonArray();
         for (int i = 0; i < listname.size(); i++) {
           if (listname.getJsonObject(i).getValue("name").toString().equals(city) && listname.getJsonObject(i).getValue("country").toString().equals(country)) {
-            System.out.println("NAME CTY : " + listname.getJsonObject(i).getValue("name").toString());
             id=listname.getJsonObject(i).getValue("id").toString();
           }
         }
         future.complete(id);
       } else {
-        System.err.println("Error while reading from file: " + result.cause().getMessage());
         future.fail(result.cause());
       }
     });
     return future;
   }
-
-
-
-
-
-
-
-
-
-
-
-
-/*  private static String getTheId( String city,String country, Vertx vertx) {
-    System.out.println("GET THE ID");
-    System.out.println("City : " + city +"  Country : " + country);
-    AtomicReference<String> cityId= new AtomicReference<>("");
-    vertx.fileSystem().readFile("city.json", result -> {
-      if (result.succeeded()) {
-        System.out.println("SUCCEED");
-        JsonArray listname = result.result().toJsonArray();
-        for (int i = 0; i <listname.size() ; i++) {
-          if (listname.getJsonObject(i).getValue("name").toString().equals(city) && listname.getJsonObject(i).getValue("country").toString().equals(country)) {
-            System.out.println( "NAME CTY : " + listname.getJsonObject(i).getValue("name").toString());
-            cityId.set(listname.getJsonObject(i).getValue("id").toString());
-            System.out.println("ID : " + cityId.toString());
-          }
-        }
-      } else {
-        System.err.println("Oh oh ..." + result.cause());
-      }
-    });
-    System.out.println("FINAL ID : " + cityId.toString());
-    return cityId.get();
-  }*/
-
-
 }

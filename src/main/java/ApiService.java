@@ -26,6 +26,12 @@ public class ApiService {
   final static String KEY = "976136126d553c05d8890ac35365a99f";
   final static String WEATHER_API = "https://api.openweathermap.org/data/2.5/weather?q=";
   final static String WEATHER_PER_DAY_API = "https://api.openweathermap.org/data/2.5/forecast?";
+  final static String ID_NOT_FOUND = "id not found";
+  final static String INCORRECT_DAY_MESSAGE = "DAYS INCORRECT";
+  final static String INCORRECT_PLACE_MESSAGE = "this place is not exist";
+  final static String INCORRECT_PLACE_SIZE_MESSAGE = "GIVE A COUNTRY PARAM WITH 2 LETTERS";
+  final static String INCORRECT_URL_MESSAGE = "failed to retrieve weather";
+  final static String ERROR_VARIABLE = "error";
 
   ApiService() {
   }
@@ -34,37 +40,41 @@ public class ApiService {
 //================================================================================================
 
   public static JSONObject getCurrentWheater(String city, String country) {
-    if (country.length() > 2) {
-      System.out.println("AH DUDDIII");
-      return errorMessage("GIVE A COUNTRY PARAM WITH 2 LETTERS");
+    //get request api to get the current weather
+    if (country.length() > 2) {//if the size of the country is a complete name and not two-letter country code
+      return errorMessage(INCORRECT_PLACE_SIZE_MESSAGE);
     }
+    //url of the request api
     String url = WEATHER_API + city + "," + country + "&units=metric&APPID=" + KEY;
     try {
       return getRequest(url);
     } catch (IOException e) {
       e.printStackTrace();
-      return errorMessage("failed to retrieve weather");
+      return errorMessage(INCORRECT_URL_MESSAGE);
     }
   }
 
 //================================================================================================
 
   public static JSONObject getWeatherPerDays(String days, String id) {
-    if (id.equals(""))
-      return errorMessage("GIVE A CORRECT CITY/COUNTRY");
-    if (days.length() > 1 || days.equals("") || Integer.parseInt(days) == 0 || Integer.parseInt(days) > 5)
-      return errorMessage("DAYS INCORRECT");
+    //get request api to get the weather per day
+    if (id.equals(ID_NOT_FOUND))// if the id not found in the json file
+      return errorMessage(INCORRECT_PLACE_MESSAGE);
+    if (days.length() > 1 || days.equals("") || Integer.parseInt(days) == 0 || Integer.parseInt(days) > 5)//if is not a correct day period
+      return errorMessage(INCORRECT_DAY_MESSAGE);
+    //the url of the request api
     String url = WEATHER_PER_DAY_API + "id=" + id + "&units=metric&APPID=" + KEY;
     try {
       return getRequest(url);
     } catch (IOException e) {
       e.printStackTrace();
-      return errorMessage("failed to retrieve weather");
+      return errorMessage(INCORRECT_URL_MESSAGE);
     }
   }
 
   //================================================================================================
-  private static JSONObject getRequest(String urlApi) throws IOException {//flag =0 currentCall flag=1 perdayCall
+  private static JSONObject getRequest(String urlApi) throws IOException {
+    //create the request api
     URL url = new URL(urlApi);
     HttpURLConnection con = (HttpURLConnection) url.openConnection();
 
@@ -72,9 +82,9 @@ public class ApiService {
 
     if (con.getResponseCode() > HttpResponseStatus.OK.code()) {
       if (con.getResponseCode() == HttpResponseStatus.NOT_FOUND.code())
-        return errorMessage("this place is not exist");
+        return errorMessage(INCORRECT_PLACE_MESSAGE);
       else
-        return errorMessage("error " + con.getResponseCode());
+        return errorMessage(ERROR_VARIABLE + con.getResponseCode());
     }
 
     BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
@@ -85,36 +95,14 @@ public class ApiService {
     }
     in.close();
 
-    return new JSONObject(content.toString());
+    return new JSONObject(content.toString());//return the response in json type
   }
 
   //================================================================================================
-  private static JSONObject errorMessage(String message) {
+  private static JSONObject errorMessage(String message) {//create the error message
     JSONObject json = new JSONObject();
-    json.put("error", message);
+    json.put(ERROR_VARIABLE, message);
     return json;
-  }
-
-  //================================================================================================
-  private static String getTheID(String city, String country) {
-    System.out.println("AHAHAHAHAHAHAAHAHAH");
-
-   /* Gson gson = new Gson();
-    JsonElement json = null;
-    try {
-      json = gson.fromJson(new FileReader("city.json"), JsonElement.class);
-      JsonArray cityArray = json.getAsJsonArray();
-      for (int i = 0; i < cityArray.size(); i++) {
-        String place = cityArray.get(i).getAsJsonObject().get("name").toString().replace("\"", "");
-        String rac = cityArray.get(i).getAsJsonObject().get("country").toString().replace("\"", "");
-        city = city.substring(0, 1).toUpperCase() + city.substring(1);
-        if (place.equals(city) && rac.equals(country.toUpperCase()))
-          return cityArray.get(i).getAsJsonObject().get("id").toString();
-      }
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    }*/
-    return "not found";
   }
 }
 
